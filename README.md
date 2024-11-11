@@ -32,3 +32,4 @@ TODO once site works
 	- Optional Inputs: 
 		- `glob`: glob/widlcard pattern
 		- `exclude`: glob/widlcard pattern
+	- Output: newline joined string of all the files
