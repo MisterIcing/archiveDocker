@@ -20,7 +20,7 @@
 .globalsecback{ /* Secondary color for card backs */
     background-color: #d66565;
 }
-.globalicon{ /* Color for icons - so far only arrow on header*/
+.globalicon{ /* Color for icons - so far only arrow on header */
     color: #caeda1;
 }
 .globalbuttonback:hover{ /* Background/rad used for header button */
