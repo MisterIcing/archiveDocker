@@ -1,0 +1,6 @@
+.mainbody{
+    padding:'5px';
+    border:'2px solid';
+    border-radius:'5px';
+    overflow-Y:'auto';
+}

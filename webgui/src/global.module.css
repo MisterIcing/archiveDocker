@@ -1,0 +1,34 @@
+.globaltitle{ /* Main color/font for important text */
+    color: red;
+}
+.globaltext{  /* Main color/font for text to be used */
+    color: rgb(0, 92, 0);
+}
+.globalback{ /* Used for background of all pages */
+    background-color: orange;
+    /* background-image: linear-gradient(black, gray); */
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+}
+.globalheaderback{ /* Color for header*/
+    background-color: #1e90ff;
+}
+.globalmainback{ /* Color for card backs*/
+    background-color: blue;
+}
+.globalsecback{ /* Secondary color for card backs */
+    background-color: #d66565;
+}
+.globalicon{ /* Color for icons - so far only arrow on header*/
+    color: #caeda1;
+}
+.globalbuttonback:hover{ /* Background/rad used for header button */
+    background-color: var(--primary-color); /* See :root colors */
+    border-radius: 50px;
+}
+
+:root{ /* Needed for mui tags */
+    --primary-color: lightgray; /* Icon Color */
+    --secondary-color: #d66565; /* Secondary Icon Color */
+}
