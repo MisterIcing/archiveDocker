@@ -1,0 +1,27 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+webgui/node_modules
+wbgui/.pnp
+webgui/.pnp.js
+
+# testing
+webgui/coverage
+
+# production
+webgui/build
+
+# misc
+webgui/.DS_Store
+webgui/.env.local
+webgui/.env.development.local
+webgui/.env.test.local
+webgui/.env.production.local
+
+webgui/npm-debug.log*
+webgui/yarn-debug.log*
+webgui/yarn-error.log*
+.vscode
+
+backend/output/*
+*/__pycache__

@@ -23,13 +23,40 @@ TODO once site works
 	- Note: URL for archive is the area following details
 		- `https://archive.org/details/<THIS PART>`
 - Backend:
-	- Use `python3 backend.py` from the webgui folder
+	- Use `python3 backend.py` from the backend folder
+	- Note: Outputs files to `backend/output`
 
 ## API
-- POST `/api/dryrun`
-	- Gets the list of files in the archive folder
-	- Inputs: `url`
+- POST `/api/list`
+	- Gets the list of files on the archive
+	- Inputs: 
+		- `url`: archive identifier or url with identifier
 	- Optional Inputs: 
-		- `glob`: glob/widlcard pattern
-		- `exclude`: glob/widlcard pattern
-	- Output: newline joined string of all the files
+		- `glob`: glob pattern
+		- `exclude`: glob pattern
+	- Output:  
+		- 200: Newline joined string of all the files
+		- 202: No URL/identifier
+		- 406: Invalid identifier
+
+- POST `/api/download`
+	- Begins download from internet archive to storage (`backend/output`)
+	- Inputs:
+		- `url`: archive identifier or url with identifier
+	- Optional Inputs:
+		- `glob`: glob pattern
+		- `exclude`: glob pattern
+		- `verbose`: boolean
+	- Output: 
+		- 200: "Completed Download"
+		- 202: No URL/identifier
+		- 406: Invalid identifier
+
+- POST `/api/url2ID`
+	- Limits URL to identifier for internet archive
+	- Inputs:
+		- `url`: archive identifier or url with identifier
+	- Output:
+		- 200: Found identifier
+		- 202: No URL/identifier
+		- 406: Invalid identifier

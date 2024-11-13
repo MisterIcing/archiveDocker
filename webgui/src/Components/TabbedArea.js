@@ -36,12 +36,18 @@ function OutputInfo(props) {
                     <Box sx={{fontFamily: 'Monospace'}}>
                         <Typography className={styles.globaltext} style={{whiteSpace: 'pre-line'}}>
                             {tab === 0 ? 
-                                props.output ?
-                                    props.output
+                                props.globing ?
+                                    props.globing
                                     :
-                                    "No Output Found"
+                                    `No Output Found for ${props.url}`
                                 :
-                                "Not Implemented"
+                             tab === 1 ?
+                                props.active ?
+                                    props.downloading
+                                    :
+                                    "Not Downloading"
+                                :
+                            "Invalid Tab Selection?"
                             }
                         </Typography>
                     </Box>
