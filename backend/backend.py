@@ -40,7 +40,7 @@ def list():
         kwargs['exclude_pattern'] = data['exclude']
 
     fileNames = [f.name for f in get_files(id, **kwargs)]
-    result = f"{'\n'.join(fileNames)}"
+    result = '\n'.join(fileNames)
 
     return jsonify(result=result), 200
 
