@@ -7,9 +7,6 @@ FROM node:latest AS webui
     WORKDIR /tmp
     RUN mkdir /app && mkdir /app/webapp \
         && git clone https://github.com/MisterIcing/internetArchiveWebgui --branch Celery --single-branch /app/webapp
-        # && wget https://github.com/MisterIcing/internetArchiveWebgui/archive/refs/heads/main.zip \
-        # && unzip main.zip \
-        # && mv *-main/* /app/webapp/
 
     # Build webapp for deployment
     WORKDIR /app/webapp/webgui
@@ -41,4 +38,6 @@ FROM node:latest AS prod
 
 EXPOSE 3000
 EXPOSE 5000
-ENTRYPOINT [ "/bin/bash" ]
+VOLUME [ "/app/output" ]
+ENTRYPOINT [ "/app/entryScript" ]
+# ENTRYPOINT [ "/bin/bash" ]

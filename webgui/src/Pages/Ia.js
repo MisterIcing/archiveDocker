@@ -52,7 +52,7 @@ function Ia() {
   }, [url, glob, exclude]);
 
   // Download when button is pressed
-  async function startDownload() {
+  async function startDownload() { //TODO Update download w/redis-server
     setDownloading(true);
     setResDown(`Currently Downloading: ${url}`);
     //axios doesnt support streaming

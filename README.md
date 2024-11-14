@@ -2,7 +2,13 @@
 Originally this started as a way to get files from the [internet archive](https://archive.org/) to my [unraid](https://unraid.net/) server, but there was no docker image in the community plugins that I found. Thus I needed to create the dockerfile so that I could add it to the server. Although the console is fine for me, its not for everyone that would use it, so I needed to make a web interface for them. I figured I could also do the same for youtube-dl and save time, so it is there too.
 
 # Dockerfile
-TODO once site works
+- Ports
+	- `3000`: webgui
+	- `5000`: server
+- Volumes
+	- `/app/output`: Folder of downloaded files
+
+By default, the console logs are linked to the server. There are also log files in `/log` for the subcomponents
 
 # React Site
 ## Building
