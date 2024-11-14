@@ -20,7 +20,10 @@ FROM node:latest AS prod
         python3-flask \
         python3-flask-cors \
         python3-internetarchive \
-        gunicorn
+        python3-celery \
+        python3-redis \
+        gunicorn \
+        celery
     RUN npm install -g serve
 
     COPY --from=webui /app/webapp/backend/backend.py /app/backend.py

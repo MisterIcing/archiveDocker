@@ -3,8 +3,7 @@ from flask_cors import CORS
 from internetarchive import get_files, download
 import os
 import re
-from io import StringIO
-from contextlib import redirect_stdout
+from celery import Celery
 
 #https://archive.org/developers/internetarchive/api.html#searching-items
 
@@ -13,6 +12,11 @@ app = Flask(__name__)
 # CORS(app, resources={r"/api/*": {"origins": ["http://localhost:3000", "http://127.0.0.1:3000"]}})
 CORS(app)
 
+# set up celery for long downloads
+app.config['CELERY_BROKER_URL'] = 'redis://localhost:6379/0'
+app.config['CELERY_RESULT_BACKEND'] = 'redis://localhost:6379/0'
+celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'])
+celery.conf.update(app.config)
 
 # POST `/api/list`
 # 	- Gets the list of files on the archive
@@ -79,19 +83,32 @@ def run():
         kwargs['glob_pattern'] = data['glob']
     if data.get('exclude'):
         kwargs['exclude_pattern'] = data['exclude']
-    if data.get('verbose'):
-        kwargs['verbose'] = data['verbose']
-    else:
-        kwargs['verbose'] = True
+    kwargs['verbose'] = data.get('verbose', True)
     kwargs['destdir'] = 'output'
 
     # create output folder if it doesnt exist
     os.makedirs('output', exist_ok=True)
 
-    download(id, **kwargs)
-    result = f"Completed Download"
+    task = longDownload.delay(id, kwargs)
 
-    return jsonify(result=result), 200
+    # return jsonify(result=result), 200
+    return jsonify({'task_id': task.id}), 202
+
+@celery.task(bind=True)
+def longDownload(self, id, kwargs):
+    download(id, **kwargs)
+    return "Completed Download"
+
+@app.route('/api/task_status/<task_id>', methods=['GET'])
+def task_status(task_id):
+    task = longDownload.AsyncResult(task_id)
+    if task.state == 'PENDING':
+        response = {'status': 'Pending...'}
+    elif task.state == 'SUCCESS':
+        response = {'status': 'Completed', 'result': task.result}
+    else:
+        response = {'status': task.state, 'info': str(task.info)}
+    return jsonify(response)
 
 # @app.route('/api/checkFiles', methods=['POST'])
 # def checkFiles():
