@@ -25,7 +25,6 @@ FROM node:latest AS prod
 
     COPY --from=webui /app/webapp/backend/backend.py /app/backend.py
     COPY --from=webui /app/webapp/webgui/build /app/frontend
-    # COPY --from=webui /app/webapp/webgui /app/frontend
     COPY --from=webui /app/webapp/entry /app/entryScript
 
     # Get ready for entry & logging
