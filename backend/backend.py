@@ -11,7 +11,7 @@ from contextlib import redirect_stdout
 
 app = Flask(__name__)
 # CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}})
-CORS(app)
+CORS(app, origins=["http://localhost:3000"])
 
 
 # POST `/api/list`
