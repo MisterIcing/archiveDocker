@@ -1,11 +1,11 @@
 FROM node:latest AS webui
     RUN apt update && apt install -y \
         wget \
-        unzip \
-        python3 \
-        python3-flask \
-        python3-flask-cors \
-        python3-internetarchive
+        unzip 
+        # python3 \
+        # python3-flask \
+        # python3-flask-cors \
+        # python3-internetarchive
 
     # Build my webapp
     WORKDIR /tmp
@@ -24,7 +24,8 @@ FROM node:latest AS prod
     RUN apt update && apt install -y \
         python3-flask \
         python3-flask-cors \
-        python3-internetarchive
+        python3-internetarchive \
+        python3-gunicorn
     RUN npm install -g serve
     RUN mkdir /log
 
@@ -32,6 +33,7 @@ FROM node:latest AS prod
     COPY --from=webui /app/webapp/webgui/build /app/frontend
     COPY --from=webui /app/webapp/entry /app/entryScript
     WORKDIR /app
+    RUN chmod +x entryScript
 
 EXPOSE 3000
 EXPOSE 5000
