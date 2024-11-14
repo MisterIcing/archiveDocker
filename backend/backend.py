@@ -22,8 +22,12 @@ CORS(app)
 # 		- `glob`: glob pattern
 # 		- `exclude`: glob pattern
 # 	- Output: newline joined string of all the files
-@app.route('/api/list', methods=['POST'])
+@app.route('/api/list', methods=['OPTIONS', 'POST'])
 def list():
+    # preflight
+    if request.method == 'OPTIONS':
+        return '', 204
+
     data = request.json
 
     # Give proper error if testing with http
@@ -55,8 +59,12 @@ def list():
 # 		- `exclude`: glob pattern
 # 		- `verbose`: boolean
 # 	- Output: None
-@app.route('/api/download', methods=['POST'])
+@app.route('/api/download', methods=['OPTIONS', 'POST'])
 def run():
+    # preflight
+    if request.method == 'OPTIONS':
+        return '', 204
+    
     data = request.json
 
     if not data.get('url'):
@@ -107,8 +115,12 @@ def run():
 # 		- 200: Found identifier
 # 		- 202: No URL/identifier
 # 		- 406: Invalid identifier
-@app.route('/api/url2ID', methods=['POST'])
+@app.route('/api/url2ID', methods=['OPTIONS', 'POST'])
 def url2ID_apiWrap():
+    # preflight
+    if request.method == 'OPTIONS':
+        return '', 204
+
     data = request.json
 
     if not data.get('url'):
