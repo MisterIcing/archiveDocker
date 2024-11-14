@@ -1,17 +1,11 @@
-FROM alpine:latest AS archive
-    RUN apk add --no-cache curl
-
-    WORKDIR /app/ia
-    # Get ia command line
-    RUN curl -LO https://archive.org/download/ia-pex/ia \
-        && chmod +x ia
-
 FROM node:latest AS webui
     RUN apt update && apt install -y \
         wget \
         unzip \
         python3 \
-        python3-flask
+        python3-flask \
+        python3-flask-cors \
+        python3-internetarchive
 
     # Build my webapp
     WORKDIR /tmp
@@ -21,21 +15,23 @@ FROM node:latest AS webui
         && mv *-main/* /app/webapp/
 
 
-    WORKDIR /app/webapp/
-    RUN cd webgui \
-        && npm i
+    WORKDIR /app/webapp/webgui
+    RUN npm i \
+        && npm run build
 
-    # RUN 
+FROM node:latest AS prod
+    # RUN apk add --no-cache bash python3
+    RUN apt update && apt install -y \
+        python3-flask \
+        python3-flask-cors \
+        python3-internetarchive
+    RUN npm install -g serve
+    RUN mkdir /log
 
-
-# FROM alpine:latest AS prod
-#     COPY --from=archive /app/ia /app/ia
-#     COPY --from=webui /app/webui /app/webui
-
-    # if using python backend
-    # RUN apk add --no-cache python3 py3-pip \
-    #   && python3 -m ensurepip \
-    #   && python3 -m pip install internetarchive
+    COPY --from=webui /app/webapp/backend /app/backend
+    COPY --from=webui /app/webapp/webgui/build /app/frontend
+    COPY --from=webui /app/webapp/entry /app/entryScript
+    WORKDIR /app
 
 EXPOSE 3000
 EXPOSE 5000

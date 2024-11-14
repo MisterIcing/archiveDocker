@@ -1,0 +1,7 @@
+#!/bin/bash
+
+serve -s frontend -l 3000 >> /log/webLog 2>&1 &
+
+python3 backend/backend.py 2>&1 | tee -a /log/serverLog
+
+wait
