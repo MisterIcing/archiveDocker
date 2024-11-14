@@ -11,7 +11,7 @@ from contextlib import redirect_stdout
 
 app = Flask(__name__)
 # CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}})
-CORS(app, origins=["http://localhost:3000"])
+# CORS(app, origins=["http://localhost:3000"])
 
 
 # POST `/api/list`
@@ -74,7 +74,7 @@ def run():
     if data.get('verbose'):
         kwargs['verbose'] = data['verbose']
     else:
-        kwargs['verbose'] = False
+        kwargs['verbose'] = True
     kwargs['destdir'] = 'output'
 
     # create output folder if it doesnt exist
