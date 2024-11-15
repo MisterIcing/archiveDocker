@@ -10,6 +10,6 @@ celery -A backend.celery worker --loglevel=info >> /log/celeryLog 2>&1 &
 redis-server >> /log/redisLog &
 
 #backend
-gunicorn -b "0.0.0.0:5000" "backend:app" --workers 1 --worker-class eventlet 2>&1 | tee -a /log/serverLog &
+gunicorn -b "0.0.0.0:5000" "backend:app" --workers 1 --log-level info --access-logfile - --worker-class eventlet 2>&1 | tee -a /log/serverLog &
 
 wait
