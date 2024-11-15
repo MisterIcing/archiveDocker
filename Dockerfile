@@ -4,9 +4,10 @@ FROM node:latest AS webui
         unzip 
 
     # Get my webapp
-    WORKDIR /tmp
+    WORKDIR /
     RUN mkdir /app && mkdir /app/webapp \
-        && git clone https://github.com/MisterIcing/internetArchiveWebgui --branch Celery --single-branch /app/webapp
+        && git clone https://github.com/MisterIcing/internetArchiveWebgui --branch main --single-branch /app/webapp
+    # COPY . /app/webapp
 
     # Build webapp for deployment
     WORKDIR /app/webapp/webgui
@@ -20,6 +21,8 @@ FROM node:latest AS prod
         python3-internetarchive \
         python3-celery \
         python3-redis \
+        python3-flask-socketio \
+        python3-eventlet \
         gunicorn \
         celery \
         redis-server

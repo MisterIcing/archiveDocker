@@ -25,3 +25,5 @@ webgui/yarn-error.log*
 
 backend/output/*
 */__pycache__
+log/
+.localstart
