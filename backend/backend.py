@@ -1,18 +1,42 @@
-from flask import Flask, request, jsonify, Response, stream_with_context
+from flask import Flask, request, jsonify
+from flask_socketio import SocketIO, emit
 from flask_cors import CORS
 from internetarchive import get_files, download
 import os
 import re
-from io import StringIO
-from contextlib import redirect_stdout
+import time
+from celery import Celery
+from celery.result import AsyncResult
+from threading import Thread
 
 #https://archive.org/developers/internetarchive/api.html#searching-items
 
+########################################################################################################
+#Global vars
+UI_UPDATE_TIME = 10      # seconds between sending task updates
+POLLING_ENABLED = True  # disable constant polling if not downloading
 
+########################################################################################################
+#Set up
+
+# set up flask
 app = Flask(__name__)
-# CORS(app, resources={r"/api/*": {"origins": ["http://localhost:3000", "http://127.0.0.1:3000"]}})
-CORS(app)
 
+# set up socketio
+socketio = SocketIO(app, cors_allowed_origins="*", message_queue='redis://localhost:6379/0')
+
+# set up cors
+CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
+# CORS(app)
+
+# set up celery for long downloads
+app.config['CELERY_BROKER_URL'] = 'redis://localhost:6379/0'
+app.config['CELERY_RESULT_BACKEND'] = 'redis://localhost:6379/0'
+celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'], backend=app.config['CELERY_RESULT_BACKEND'], task_ignore_result=False)
+celery.conf.update(app.config)
+
+########################################################################################################
+#API Calls
 
 # POST `/api/list`
 # 	- Gets the list of files on the archive
@@ -49,7 +73,6 @@ def list():
 
     return jsonify(result=result), 200
 
-
 # POST `/api/download`
 # 	- Begins download from internet archive to storage (`backend/output`)
 # 	- Inputs:
@@ -79,33 +102,30 @@ def run():
         kwargs['glob_pattern'] = data['glob']
     if data.get('exclude'):
         kwargs['exclude_pattern'] = data['exclude']
-    if data.get('verbose'):
-        kwargs['verbose'] = data['verbose']
-    else:
-        kwargs['verbose'] = True
+    kwargs['verbose'] = data.get('verbose', True)
     kwargs['destdir'] = 'output'
 
     # create output folder if it doesnt exist
     os.makedirs('output', exist_ok=True)
 
-    download(id, **kwargs)
-    result = f"Completed Download"
+    task = longDownload.delay(id, kwargs)
 
-    return jsonify(result=result), 200
+    # return jsonify(result=result), 200
+    Thread(target=updateStatus, args=(task.id,)).start()
 
-# @app.route('/api/checkFiles', methods=['POST'])
-# def checkFiles():
-#     data = request.json
+    return jsonify({'task_id': task.id}), 202
 
-#     if not data.get('url'):
-#         return jsonify(error="URL/Identifier is required"), 202
-#     id = url2ID(data['url']) # Should sanitize from going back dirs
-#     if not id:
-#         return jsonify(error="Identifier could not be resolved"), 406
-
-#     if not os.path.exists():
-#         os.makedirs()
-
+# TODO these comments
+@app.route('/api/task_status/<task_id>', methods=['GET'])
+def task_status(task_id):
+    task = longDownload.AsyncResult(task_id)
+    if task.state == 'PENDING':
+        response = {'status': 'Pending...'}
+    elif task.state == 'SUCCESS':
+        response = {'status': 'Completed', 'result': task.result}
+    else:
+        response = {'status': task.state, 'info': str(task.info)}
+    return jsonify(response)
 
 # POST `/api/url2ID`
 # 	- Limits URL to identifier for internet archive
@@ -128,20 +148,60 @@ def url2ID_apiWrap():
 
     id = url2ID(data['url'])
 
-    # TODO Should change http code?
     if id:
         return jsonify(result=id), 200 
     else:
         jsonify(error=f'Invalid url. Results: {id}'), 406
 
-# Helper function turning the url into the archive identifier (the thing after /details/)
+# TODO this entire function
+# @app.route('/api/checkFiles', methods=['POST'])
+# def checkFiles():
+#     data = request.json
+
+#     if not data.get('url'):
+#         return jsonify(error="URL/Identifier is required"), 202
+#     id = url2ID(data['url']) # Should sanitize from going back dirs
+#     if not id:
+#         return jsonify(error="Identifier could not be resolved"), 406
+
+#     if not os.path.exists():
+#         os.makedirs()
+
+# TODO startPolling javadoc
+@app.route('/api/startPolling', methods=['GET'])
+def startPolling():
+    global POLLING_ENABLED
+    POLLING_ENABLED = True
+    return jsonify({'status': 'Started'}), 200
+
+# TODO stopPolling javadoc
+@app.route('/api/stopPolling', methods=['GET'])
+def stopPolling():
+    global POLLING_ENABLED
+    POLLING_ENABLED = False
+    return jsonify({'status': 'Stopped'}), 200
+
+########################################################################################################
+#Celery helpers
+
+# TODO longDownload javadoc
+@celery.task(bind=True)
+def longDownload(self, id, kwargs):
+    result = download(id, **kwargs)
+
+    socketio.emit('task_status', {'status': 'Completed', 'result': result})
+    return "Completed Download"
+
+########################################################################################################
+#Helper functions
+
+# Turns the url into the archive identifier (the thing after /details/)
 #  	- Inputs:
 #       - id: str('') to seperate to valid id
 #   - Outputs:
 #       - str: Valid archive id
 #       - None: If no id was found or if uses invalid symbols
 def url2ID(id: str=''):
-    # remove base to get identifier
     # known addresses:
         # http[s]?://archive.org/details/
     # find & remove url base
@@ -154,8 +214,35 @@ def url2ID(id: str=''):
     if re.search(r"^[A-z0-9-.,]+$", id):
         return id
     
-    # TODO Should throw error?
     return None
 
+# Emitter status updater
+#   - Inputs: 
+#       - task_id: task id corresponding to async download
+#   - Outputs:
+#       - Socket emit w/task id and status
+#   - Statuses:
+#       - Pending: waiting to start
+#       - In Progress: currently running; includes task info as `progress`
+#       - Completed: finished task
+#       - Unknown: catchall; includes task state as `progress`
+def updateStatus(task_id):
+    while POLLING_ENABLED:
+        task = AsyncResult(task_id)
+        if task.state == 'PENDING':
+            socketio.emit('task_status', {'task_id': task_id, 'status': 'Pending' })
+        elif task.state == 'PROGRESS':
+            socketio.emit('task_status', {'task_id': task_id, 'status': 'In Progress', 'progress': task.info})
+        elif task.state == "SUCCESS":
+            socketio.emit('task_status', {'task_id': task_id, 'status': 'Completed'})
+            break
+        else:
+            socketio.emit('task_status', {'task_id': task_id, 'status': 'Unknown', 'progress': task.state})
+        time.sleep(UI_UPDATE_TIME)
+
+########################################################################################################
+#Start app
+
 if __name__ == '__main__':
-    app.run(port=5000)
+    # app.run(port=5000)
+    socketio.run(app)

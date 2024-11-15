@@ -1,14 +1,13 @@
 FROM node:latest AS webui
     RUN apt update && apt install -y \
-        wget \
+        git \
         unzip 
 
     # Get my webapp
-    WORKDIR /tmp
+    WORKDIR /
     RUN mkdir /app && mkdir /app/webapp \
-        && wget https://github.com/MisterIcing/internetArchiveWebgui/archive/refs/heads/main.zip \
-        && unzip main.zip \
-        && mv *-main/* /app/webapp/
+        && git clone https://github.com/MisterIcing/internetArchiveWebgui --branch main --single-branch /app/webapp
+    # COPY . /app/webapp
 
     # Build webapp for deployment
     WORKDIR /app/webapp/webgui
@@ -20,7 +19,13 @@ FROM node:latest AS prod
         python3-flask \
         python3-flask-cors \
         python3-internetarchive \
-        gunicorn
+        python3-celery \
+        python3-redis \
+        python3-flask-socketio \
+        python3-eventlet \
+        gunicorn \
+        celery \
+        redis-server
     RUN npm install -g serve
 
     COPY --from=webui /app/webapp/backend/backend.py /app/backend.py
@@ -31,16 +36,11 @@ FROM node:latest AS prod
     WORKDIR /app
     RUN chmod +x entryScript
 
-    # Secondary entry for dev
-    RUN echo "#!/bin/bash" > secondEntry \
-        && echo "serve -s frontend -l 3000 >> /log/webLog 2>&1 &" >> secondEntry \
-        && echo "python3 backend.py 2>&1 | tee -a /log/serverLog &" >> secondEntry \
-        && echo "wait" >> secondEntry \
-        && chmod +x secondEntry
-
     RUN mkdir /log
     RUN mkdir output
 
 EXPOSE 3000
 EXPOSE 5000
-ENTRYPOINT [ "/bin/bash" ]
+VOLUME [ "/app/output" ]
+ENTRYPOINT [ "/app/entryScript" ]
+# ENTRYPOINT [ "/bin/bash" ]
