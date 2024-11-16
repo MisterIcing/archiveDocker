@@ -19,6 +19,7 @@ By default, the console logs are linked to the server. There are also log files 
 1) Backend:
 	- Built in python-3 with flask
 	- Uses [internet archive python interface](https://github.com/jjjake/internetarchive)
+	- Requirements are located in `backend`
 
 ## Running
 - Ports:
@@ -26,13 +27,11 @@ By default, the console logs are linked to the server. There are also log files 
 	- `5000`: flask server port
 - Frontend:
 	- Use `npm start` or `npm run build` from the webgui folder
-	- Note: URL for archive is the area following details
-		- `https://archive.org/details/<THIS PART>`
 - Backend:
 	- Use `python3 backend.py` from the backend folder
 	- Note: Outputs files to `backend/output`
 
-## API
+# API
 - POST `/api/list`
 	- Gets the list of files on the archive
 	- Inputs: 
@@ -43,10 +42,11 @@ By default, the console logs are linked to the server. There are also log files 
 	- Output:  
 		- 200: Newline joined string of all the files
 		- 202: No URL/identifier
+		- 204: Options confirmation
 		- 406: Invalid identifier
 
 - POST `/api/download`
-	- Begins download from internet archive to storage (`backend/output`)
+	- Begins download from internet archive to storage (`/app/output`)
 	- Inputs:
 		- `url`: archive identifier or url with identifier
 	- Optional Inputs:
@@ -54,9 +54,18 @@ By default, the console logs are linked to the server. There are also log files 
 		- `exclude`: glob pattern
 		- `verbose`: boolean
 	- Output: 
-		- 200: "Completed Download"
+		- 200: task id for download
 		- 202: No URL/identifier
+		- 204: Options confirmation
 		- 406: Invalid identifier
+
+- GET `/api/task_status/<task_id>`
+	- Checks the status of downloading the task based on id
+	- Note: Unused in place of socketio emitting when the task is done
+	- Inputs:
+		- `task_id`: id number given from `/api/download`
+	- Outputs:
+		- 200: Pending, in progress, or complete depending on task state
 
 - POST `/api/url2ID`
 	- Limits URL to identifier for internet archive
@@ -65,4 +74,19 @@ By default, the console logs are linked to the server. There are also log files 
 	- Output:
 		- 200: Found identifier
 		- 202: No URL/identifier
+		- 204: Options confirmation
 		- 406: Invalid identifier
+
+- GET `/api/startPolling`
+	- Allows polling for the status of the download
+	- Note: Unused as it should always be enabled
+	- Inputs:
+	- Outputs:
+		- 200: 'Enabled'
+
+- GET `/api/stopPolling`
+	- Disables polling for the status of the download
+	- Note: Unused as it should not be disabled
+	- Inputs:
+	- Outputs:
+		- 200: 'Disabled'

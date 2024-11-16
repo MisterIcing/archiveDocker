@@ -91,7 +91,7 @@ function Ia() {
       setStatus(data.status);
       console.log(data);
 
-      if(data.status == 'Completed'){
+      if(data.status === 'Completed'){
         setActive(false);
         socket.disconnect();
       }

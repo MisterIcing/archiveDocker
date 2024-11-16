@@ -13,8 +13,8 @@ from threading import Thread
 
 ########################################################################################################
 #Global vars
-UI_UPDATE_TIME = 10      # seconds between sending task updates
-POLLING_ENABLED = True  # disable constant polling if not downloading
+UI_UPDATE_TIME = 10         # seconds between sending task updates
+POLLING_ENABLED = True      # enable/disable checking when download is complete
 
 ########################################################################################################
 #Set up
@@ -22,12 +22,11 @@ POLLING_ENABLED = True  # disable constant polling if not downloading
 # set up flask
 app = Flask(__name__)
 
-# set up socketio
+# set up socketio for watching tasks
 socketio = SocketIO(app, cors_allowed_origins="*", message_queue='redis://localhost:6379/0')
 
 # set up cors
 CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
-# CORS(app)
 
 # set up celery for long downloads
 app.config['CELERY_BROKER_URL'] = 'redis://localhost:6379/0'
@@ -45,7 +44,11 @@ celery.conf.update(app.config)
 # 	- Optional Inputs: 
 # 		- `glob`: glob pattern
 # 		- `exclude`: glob pattern
-# 	- Output: newline joined string of all the files
+# 	- Output:  
+# 		- 200: Newline joined string of all the files
+# 		- 202: No URL/identifier
+# 		- 204: Options confirmation
+# 		- 406: Invalid identifier
 @app.route('/api/list', methods=['OPTIONS', 'POST'])
 def list():
     # preflight
@@ -110,22 +113,29 @@ def run():
 
     task = longDownload.delay(id, kwargs)
 
-    # return jsonify(result=result), 200
     Thread(target=updateStatus, args=(task.id,)).start()
 
-    return jsonify({'task_id': task.id}), 202
+    return jsonify({'task_id': task.id}), 200
 
-# TODO these comments
+# - GET `/api/task_status/<task_id>`
+# 	- Checks the status of downloading the task based on id
+# 	- Note: Unused in place of socketio emitting when the task is done
+# 	- Inputs:
+# 		- `task_id`: id number given from `/api/download`
+# 	- Outputs:
+# 		- 200: Pending, in progress, or complete depending on task state
 @app.route('/api/task_status/<task_id>', methods=['GET'])
 def task_status(task_id):
     task = longDownload.AsyncResult(task_id)
     if task.state == 'PENDING':
         response = {'status': 'Pending...'}
+    if task.state == 'PROGRESS':
+        response = {'status': 'In Progress..', 'result': str(task.info)}
     elif task.state == 'SUCCESS':
         response = {'status': 'Completed', 'result': task.result}
     else:
-        response = {'status': task.state, 'info': str(task.info)}
-    return jsonify(response)
+        response = {'status': task.state, 'result': str(task.info)}
+    return jsonify(response), 200
 
 # POST `/api/url2ID`
 # 	- Limits URL to identifier for internet archive
@@ -134,6 +144,7 @@ def task_status(task_id):
 # 	- Output:
 # 		- 200: Found identifier
 # 		- 202: No URL/identifier
+# 		- 204: Options confirmation
 # 		- 406: Invalid identifier
 @app.route('/api/url2ID', methods=['OPTIONS', 'POST'])
 def url2ID_apiWrap():
@@ -167,24 +178,48 @@ def url2ID_apiWrap():
 #     if not os.path.exists():
 #         os.makedirs()
 
-# TODO startPolling javadoc
+# - GET `/api/startPolling`
+# 	- Allows polling for the status of the download
+# 	- Note: Unused as it should always be enabled
+# 	- Inputs:
+# 	- Outputs:
+# 		- 200: 'Enabled'
 @app.route('/api/startPolling', methods=['GET'])
 def startPolling():
     global POLLING_ENABLED
     POLLING_ENABLED = True
-    return jsonify({'status': 'Started'}), 200
+    return jsonify({'result': 'Enabled'}), 200
 
-# TODO stopPolling javadoc
+# - GET `/api/stopPolling`
+# 	- Disables polling for the status of the download
+# 	- Note: Unused as it should not be disabled
+# 	- Inputs:
+# 	- Outputs:
+# 		- 200: 'Disabled'
 @app.route('/api/stopPolling', methods=['GET'])
 def stopPolling():
     global POLLING_ENABLED
     POLLING_ENABLED = False
-    return jsonify({'status': 'Stopped'}), 200
+    return jsonify({'result': 'Disabled'}), 200
 
 ########################################################################################################
 #Celery helpers
 
-# TODO longDownload javadoc
+# Background task to actually download the files from archive
+# Gunicorn has a timeout, so its outsourced to celery
+# Completion is emitted by socketio to the client
+#   - Inputs:
+#       - id: archive identifier
+#       - kwargs: 
+#           - glob_pattern
+#           - exlude_pattern
+#           - destdir
+#           - verbose
+#   - Outputs:
+#       - return: 
+#           - 'Completed Download'
+#       - socketio:
+#           - task_status complete
 @celery.task(bind=True)
 def longDownload(self, id, kwargs):
     result = download(id, **kwargs)
@@ -213,7 +248,6 @@ def url2ID(id: str=''):
         # only allows alphanum . , -
     if re.search(r"^[A-z0-9-.,]+$", id):
         return id
-    
     return None
 
 # Emitter status updater
