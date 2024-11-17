@@ -26,7 +26,8 @@ app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*", message_queue='redis://localhost:6379/0')
 
 # set up cors
-CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
+# CORS(app, resources={r"/*": {"origins": ["http://localhost:*", "http://<local-ip>:*"]}})
+CORS(app, origins='*')  # less safe, but idk how to do local ip
 
 # set up celery for long downloads
 app.config['CELERY_BROKER_URL'] = 'redis://localhost:6379/0'
@@ -279,4 +280,4 @@ def updateStatus(task_id):
 
 if __name__ == '__main__':
     # app.run(port=5000)
-    socketio.run(app)
+    socketio.run(app, host='0.0.0.0', port=5000)
