@@ -40,7 +40,7 @@ function Ia() {
   useEffect(() => {
     const getDryRun = async () => {
       try {
-        const response = await axios.post('http://localhost:5000/api/list', {
+        const response = await axios.post('http://gunicorn:5000/api/list', {
           url: url,
           glob: glob,
           exclude: exclude
@@ -64,7 +64,7 @@ function Ia() {
   async function startDownload() {
     setActive(true);
     setStatus('Pending')
-    const res = await axios.post('http://localhost:5000/api/download',{
+    const res = await axios.post('http://gunicorn:5000/api/download',{
         url: url,
         glob: glob,
         exclude: exclude
@@ -77,7 +77,7 @@ function Ia() {
       return;
     }
 
-    // const stat = await axios.post('http://localhost:5000/api/startPolling')
+    // const stat = await axios.post('http://gunicorn:5000/api/startPolling')
     // if(stat.status !== 200){
     //   console.error('Failed to start polling');
     //   //Should stop?
@@ -85,7 +85,7 @@ function Ia() {
 
     console.log(`Started download task: ${res.data.task_id}`)
 
-    const socket = io('http://localhost:5000', {transports: ['websocket', 'polling']});
+    const socket = io('http://gunicorn:5000', {transports: ['websocket', 'polling']});
 
     socket.on('task_status', (data) => {
       setStatus(data.status);

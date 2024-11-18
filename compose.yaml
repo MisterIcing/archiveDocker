@@ -1,0 +1,56 @@
+version: '3.8'
+services:
+  # react website
+  frontend:
+    hostname: react
+    build: 
+      context: ./webgui
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - gunicorn
+    networks:
+      - app-network
+  
+  # python backend
+  gunicorn:
+    hostname: server
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    depends_on:
+      - redis
+    environment:
+      - BROKER_URL=redis://redis:6379/0
+    networks:
+      - app-network
+
+  # message broker
+  redis:
+    hostname: redis
+    image: redis:7-alpine
+    container_name: redis-server
+    ports:
+      - "6379:6379"
+    networks:
+      - app-network
+  
+  # task queue
+  celery:
+    hostname: celery
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile.celery
+    depends_on:
+      - redis
+    environment:
+      - BROKER_URL=redis://redis:6379/0
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

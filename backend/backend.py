@@ -23,15 +23,14 @@ POLLING_ENABLED = True      # enable/disable checking when download is complete
 app = Flask(__name__)
 
 # set up socketio for watching tasks
-socketio = SocketIO(app, cors_allowed_origins="*", message_queue='redis://localhost:6379/0')
+socketio = SocketIO(app, cors_allowed_origins="*", message_queue='redis://redis:6379/0')
 
 # set up cors
-# CORS(app, resources={r"/*": {"origins": ["http://localhost:*", "http://<local-ip>:*"]}})
-CORS(app, origins='*')  # less safe, but idk how to do local ip
+CORS(app, resources={r"/*": {"origins": "*", "allow_headers": ["Content-Type"]}})
 
 # set up celery for long downloads
-app.config['CELERY_BROKER_URL'] = 'redis://localhost:6379/0'
-app.config['CELERY_RESULT_BACKEND'] = 'redis://localhost:6379/0'
+app.config['CELERY_BROKER_URL'] = 'redis://redis:6379/0'
+app.config['CELERY_RESULT_BACKEND'] = 'redis://redis:6379/0'
 celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'], backend=app.config['CELERY_RESULT_BACKEND'], task_ignore_result=False)
 celery.conf.update(app.config)
 
