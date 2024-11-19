@@ -1,4 +1,4 @@
-FROM node:latest AS webui
+FROM node:18-slim AS webui
     RUN apt update && apt install -y \
         git \
         unzip 
