@@ -2,7 +2,6 @@ import './Ia.css'
 import styles from '../global.module.css';
 import { Button, Card, IconButton, TextField, Typography } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
-import ReplayIcon from '@mui/icons-material/Replay';
 import Header from '../Components/Header';
 import TabbedArea from '../Components/TabbedArea';
 import { useEffect, useState } from 'react';
@@ -47,10 +46,10 @@ function Ia() {
           setResGlob("Invalid url")
           return
         }
-        const params = [];
+        let params = [];
         if(glob) params.push(`glob=${encodeURIComponent(glob)}`);
         if(exclude) params.push(`exclude=${encodeURI(exclude)}`);
-        if(params.length > 0) url += `?${params.join('&')}`;
+        if(params.length > 0) set += `?${params.join('&')}`;
 
         const response = await axios.get(set);
 
