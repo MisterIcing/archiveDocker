@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, make_response
 from flask_socketio import SocketIO, emit
 from flask_cors import CORS, cross_origin
 from internetarchive import get_files, download
@@ -15,6 +15,7 @@ from threading import Thread
 #Global vars
 UI_UPDATE_TIME = 10         # seconds between sending task updates
 POLLING_ENABLED = True      # enable/disable checking when download is complete
+REDIS_URL = 'redis://redis:6379/0'
 
 ########################################################################################################
 #Set up
@@ -23,14 +24,14 @@ POLLING_ENABLED = True      # enable/disable checking when download is complete
 app = Flask(__name__)
 
 # set up socketio for watching tasks
-socketio = SocketIO(app, cors_allowed_origins="*", message_queue='redis://redis:6379/0')
+socketio = SocketIO(app, cors_allowed_origins="*", message_queue=REDIS_URL)
 
 # set up cors
-CORS(app, resources={r"/*": {"origins": "*", "allow_headers": ["Content-Type"]}})
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 # set up celery for long downloads
-app.config['CELERY_BROKER_URL'] = 'redis://redis:6379/0'
-app.config['CELERY_RESULT_BACKEND'] = 'redis://redis:6379/0'
+app.config['CELERY_BROKER_URL'] = REDIS_URL
+app.config['CELERY_RESULT_BACKEND'] = REDIS_URL
 celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'], backend=app.config['CELERY_RESULT_BACKEND'], task_ignore_result=False)
 celery.conf.update(app.config)
 
@@ -91,10 +92,16 @@ def list(identifier):
 # 		- `verbose`: boolean
 # 	- Output: None
 @app.route('/api/download', methods=['OPTIONS', 'POST'])
+@cross_origin()
 def run():
     # preflight
     if request.method == 'OPTIONS':
-        return '', 204
+        # Handle preflight request
+        response = make_response('', 200)
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        return response
     
     data = request.json
 
