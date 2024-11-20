@@ -1,7 +1,8 @@
 import './Ia.css'
 import styles from '../global.module.css';
-import { Button, Card, TextField, Typography } from '@mui/material';
+import { Button, Card, IconButton, TextField, Typography } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
+import ReplayIcon from '@mui/icons-material/Replay';
 import Header from '../Components/Header';
 import TabbedArea from '../Components/TabbedArea';
 import { useEffect, useState } from 'react';
@@ -21,6 +22,7 @@ function Ia() {
   const [resGlob, setResGlob] = useState('');             // Output of ia file searching
   const [active, setActive] = useState(false);            // Used to determine if currently downloading
   const [status, setStatus] = useState("Inactive");       // Status of task polling
+  const [currTask, setCurrTask] = useState("");
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //Dry run functions
@@ -40,11 +42,18 @@ function Ia() {
   useEffect(() => {
     const getDryRun = async () => {
       try {
-        const response = await axios.post('http://gunicorn:5000/api/list', {
-          url: url,
-          glob: glob,
-          exclude: exclude
-        });
+        let set = `http://${window.location.hostname}:5000/api/list/${url}`
+        if(!url){
+          setResGlob("Invalid url")
+          return
+        }
+        const params = [];
+        if(glob) params.push(`glob=${encodeURIComponent(glob)}`);
+        if(exclude) params.push(`exclude=${encodeURI(exclude)}`);
+        if(params.length > 0) url += `?${params.join('&')}`;
+
+        const response = await axios.get(set);
+
         setResGlob(response.data.result);
         console.log(`Passed dry run for ${url}\n`, response.data.result)
       }
@@ -63,8 +72,7 @@ function Ia() {
   // Start download when button is pressed
   async function startDownload() {
     setActive(true);
-    setStatus('Pending')
-    const res = await axios.post('http://gunicorn:5000/api/download',{
+    const res = await axios.post(`http://${window.location.hostname}:5000/api/download`,{
         url: url,
         glob: glob,
         exclude: exclude
@@ -77,26 +85,23 @@ function Ia() {
       return;
     }
 
-    // const stat = await axios.post('http://gunicorn:5000/api/startPolling')
-    // if(stat.status !== 200){
-    //   console.error('Failed to start polling');
-    //   //Should stop?
-    // }
-
     console.log(`Started download task: ${res.data.task_id}`)
+    setStatus(`Task: ${res.data.task_id}`);
 
-    const socket = io('http://gunicorn:5000', {transports: ['websocket', 'polling']});
+    const socket = io(`http://${window.location.hostname}:5000`, {transports: ['websocket', 'polling']});
+    setCurrTask(res.data.task_id);
 
     socket.on('task_status', (data) => {
-      setStatus(data.status);
       console.log(data);
 
       if(data.status === 'Completed'){
+        setStatus("Complete")
+        setCurrTask("");
         setActive(false);
         socket.disconnect();
       }
     })
-  }
+  };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //Display JSX
@@ -119,9 +124,11 @@ function Ia() {
             <Button variant='outlined' disabled={active} startIcon={<DownloadIcon />} onClick={(eva) => startDownload()}>
               Begin Download
             </Button>
-            <Typography>
-              Status: {status}
-            </Typography>
+            <div>
+              <Typography>
+                {status}
+              </Typography>
+            </div>
           </div>
         </div>
         <br />

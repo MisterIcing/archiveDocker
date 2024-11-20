@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_socketio import SocketIO, emit
-from flask_cors import CORS
+from flask_cors import CORS, cross_origin
 from internetarchive import get_files, download
 import os
 import re
@@ -49,13 +49,18 @@ celery.conf.update(app.config)
 # 		- 202: No URL/identifier
 # 		- 204: Options confirmation
 # 		- 406: Invalid identifier
-@app.route('/api/list', methods=['OPTIONS', 'POST'])
-def list():
-    # preflight
-    if request.method == 'OPTIONS':
-        return '', 204
+@app.route('/api/list/<identifier>', methods=['GET'])
+@cross_origin()
+def list(identifier):
+    # get extra args
+    glob = request.args.get('glob', '*')
+    exclude = request.args.get('exclude', '')
 
-    data = request.json
+    data = {
+        'url': identifier,
+        'glob': glob,
+        'exclude': exclude
+    }
 
     # Give proper error if testing with http
     if not data.get('url'):
@@ -112,8 +117,6 @@ def run():
     os.makedirs('output', exist_ok=True)
 
     task = longDownload.delay(id, kwargs)
-
-    Thread(target=updateStatus, args=(task.id,)).start()
 
     return jsonify({'task_id': task.id}), 200
 
@@ -222,6 +225,7 @@ def stopPolling():
 #           - task_status complete
 @celery.task(bind=True)
 def longDownload(self, id, kwargs):
+    socketio.emit('task_status', {'status': 'Pending'})
     result = download(id, **kwargs)
 
     socketio.emit('task_status', {'status': 'Completed', 'result': result})
@@ -261,18 +265,17 @@ def url2ID(id: str=''):
 #       - Completed: finished task
 #       - Unknown: catchall; includes task state as `progress`
 def updateStatus(task_id):
-    while POLLING_ENABLED:
-        task = AsyncResult(task_id)
-        if task.state == 'PENDING':
-            socketio.emit('task_status', {'task_id': task_id, 'status': 'Pending' })
-        elif task.state == 'PROGRESS':
-            socketio.emit('task_status', {'task_id': task_id, 'status': 'In Progress', 'progress': task.info})
-        elif task.state == "SUCCESS":
-            socketio.emit('task_status', {'task_id': task_id, 'status': 'Completed'})
-            break
-        else:
-            socketio.emit('task_status', {'task_id': task_id, 'status': 'Unknown', 'progress': task.state})
-        time.sleep(UI_UPDATE_TIME)
+    task = AsyncResult(task_id)
+    if task.state == 'PENDING':
+        socketio.emit('task_status', {'task_id': task_id, 'status': 'Pending' })
+    elif task.state == 'PROGRESS':
+        socketio.emit('task_status', {'task_id': task_id, 'status': 'In Progress', 'progress': task.info})
+    elif task.state == "SUCCESS":
+        socketio.emit('task_status', {'task_id': task_id, 'status': 'Completed'})
+        return
+    else:
+        socketio.emit('task_status', {'task_id': task_id, 'status': 'Unknown', 'progress': task.state})
+    time.sleep(UI_UPDATE_TIME)
 
 ########################################################################################################
 #Start app
