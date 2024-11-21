@@ -6,3 +6,4 @@ README.md
 .vscode/
 .localStart
 log/
+backend/output/*

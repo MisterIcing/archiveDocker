@@ -1,0 +1,15 @@
+FROM docker:24-dind AS outer
+    RUN apk add --no-cache \
+        python3 \
+        py3-pip \
+        docker-compose
+
+    # Get my webapp
+    WORKDIR /app
+    # RUN mkdir /app && mkdir /app/webapp \
+    #     && git clone https://github.com/MisterIcing/internetArchiveWebgui --branch main --single-branch /app/webapp
+    COPY . /app
+
+EXPOSE 3000 5000
+VOLUME [ "/app/backend/output" ]
+CMD ["sh", "-c", "/usr/local/bin/dockerd-entrypoint.sh & sleep 5 && DOCKER_HOST=unix:///var/run/docker.sock docker-compose up"]

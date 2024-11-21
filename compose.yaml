@@ -1,11 +1,10 @@
-version: '3.8'
 services:
   # react website
   frontend:
     hostname: react
     build: 
       context: ./webgui
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.client
     ports:
       - "3000:3000"
     depends_on:
@@ -18,7 +17,9 @@ services:
     hostname: server
     build: 
       context: ./backend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.server
+    volumes:
+      - ./backend/output:/app/output:rw
     ports:
       - "5000:5000"
     depends_on:
@@ -44,6 +45,8 @@ services:
     build: 
       context: ./backend
       dockerfile: Dockerfile.celery
+    volumes:
+      - ./backend/output:/app/output:rw
     depends_on:
       - redis
     environment:

@@ -12,6 +12,5 @@ FROM python:3.11-slim AS prod
     WORKDIR /app
 
 EXPOSE 5000
-VOLUME [ "/app/output" ]
 CMD [ "gunicorn", "-b", "0.0.0.0:5000", "backend:app", "--workers", "1", "--log-level", "info", "--access-logfile", "-", "--worker-class", "eventlet" ]
 # ENTRYPOINT [ "/bin/bash" ]

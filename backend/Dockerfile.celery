@@ -16,4 +16,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . /app/
 
 # Use CMD for logging
+VOLUME [ "/app/output/" ]
 CMD ["celery", "-A", "backend.celery", "worker", "--loglevel=info"]
