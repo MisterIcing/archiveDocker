@@ -1,0 +1,46 @@
+FROM node:18-slim AS build
+    COPY webgui/ /tmp/webgui
+
+    # Build webapp for deployment
+    WORKDIR /tmp/webgui
+    RUN npm i \
+        && npm run build
+        # makes build folder at /tmp/webgui/build
+
+FROM node:18-slim AS prod
+    COPY --from=build /tmp/webgui/build /app/frontend
+    COPY backend/backend.py /app/backend/backend.py
+
+    RUN apt update && apt install -y \
+        python3-flask \
+        python3-flask-cors \
+        python3-internetarchive \
+        python3-eventlet \
+        python3-flask-socketio \
+        python3-celery \
+        python3-redis \
+        redis-server \
+        celery \
+        gunicorn 
+    
+    RUN npm install -g serve
+
+    WORKDIR /app
+    # wrapper
+    RUN echo "#!/bin/bash" > /app/log-wrapper.sh \
+        && echo "while read line; do echo \"[\$1] \$line\"; done" >> /app/log-wrapper.sh \
+        && chmod +x /app/log-wrapper.sh
+
+    RUN echo "#!/bin/bash" > init \
+        && echo "serve -s frontend -l 3000 2>&1 | /app/log-wrapper.sh FRONTEND &" >> init \
+        && echo "redis-server 2>&1 | /app/log-wrapper.sh REDIS &" >> init \
+        && echo "celery -A backend.backend.celery worker --loglevel=info 2>&1 | /app/log-wrapper.sh CELERY &" >> init \
+        && echo "gunicorn -b '0.0.0.0:5000' 'backend.backend:app' --workers 1 --log-level info --access-logfile - --worker-class eventlet 2>&1 | /app/log-wrapper.sh GUNICORN &" >> init \
+        && echo "wait" >> init \
+        && chmod +x init
+    
+
+VOLUME [ "/app/output" ]
+EXPOSE 3000 5000
+CMD [ "/bin/bash", "/app/init" ]
+# ENTRYPOINT [ "/bin/bash" ]

@@ -15,7 +15,7 @@ from threading import Thread
 #Global vars
 UI_UPDATE_TIME = 10         # seconds between sending task updates
 POLLING_ENABLED = True      # enable/disable checking when download is complete
-REDIS_URL = 'redis://redis:6379/0'
+REDIS_URL = 'redis://127.0.0.1:6379/0'
 
 ########################################################################################################
 #Set up
@@ -117,7 +117,7 @@ def run():
         kwargs['glob_pattern'] = data['glob']
     if data.get('exclude'):
         kwargs['exclude_pattern'] = data['exclude']
-    kwargs['verbose'] = data.get('verbose', True)
+    kwargs['verbose'] = data.get('verbose', False)
     kwargs['destdir'] = 'output'
 
     # create output folder if it doesnt exist
