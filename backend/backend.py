@@ -117,7 +117,7 @@ def run():
         kwargs['glob_pattern'] = data['glob']
     if data.get('exclude'):
         kwargs['exclude_pattern'] = data['exclude']
-    kwargs['verbose'] = data.get('verbose', False)
+    kwargs['verbose'] = data.get('verbose', True)
     kwargs['destdir'] = 'output'
 
     # create output folder if it doesnt exist
