@@ -235,6 +235,8 @@ def longDownload(self, id, kwargs):
     socketio.emit('task_status', {'status': 'Pending'})
     result = download(id, **kwargs)
 
+    changeOwner(id)
+
     socketio.emit('task_status', {'status': 'Completed', 'result': result})
     return "Completed Download"
 
@@ -283,6 +285,18 @@ def updateStatus(task_id):
     else:
         socketio.emit('task_status', {'task_id': task_id, 'status': 'Unknown', 'progress': task.state})
     time.sleep(UI_UPDATE_TIME)
+
+# Ownership changing
+# Unraid needs the owner to be `nobody users` in order for transfering to work properly
+#   - Inputs:
+#       - id: str of folder, which is the archive identifier
+def changeOwner(id: str, uid: int=99, gid: int=100):
+    for root, dirs, files in os.walk(f'output/{id}'):
+        os.chown(root, uid, gid)
+        for d in dirs:
+            os.chown(os.path.join(root, d), uid, gid)
+        for f in files:
+            os.chown(os.path.join(root, f), uid, gid)
 
 ########################################################################################################
 #Start app
