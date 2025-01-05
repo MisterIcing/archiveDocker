@@ -8,9 +8,6 @@ FROM node:18-slim AS build
         # makes build folder at /tmp/webgui/build
 
 FROM node:18-slim AS prod
-    COPY --from=build /tmp/webgui/build /app/frontend
-    COPY backend/backend.py /app/backend/backend.py
-
     RUN apt update && apt install -y \
         python3-flask \
         python3-flask-cors \
@@ -24,6 +21,9 @@ FROM node:18-slim AS prod
         gunicorn 
     
     RUN npm install -g serve
+
+    COPY --from=build /tmp/webgui/build /app/frontend
+    COPY backend/backend.py /app/backend/backend.py
 
     WORKDIR /app
     # wrapper

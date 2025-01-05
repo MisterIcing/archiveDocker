@@ -287,16 +287,28 @@ def updateStatus(task_id):
     time.sleep(UI_UPDATE_TIME)
 
 # Ownership changing
-# Unraid needs the owner to be `nobody users` in order for transfering to work properly
+# Unraid needs the owner to be `nobody users` (65534) (99) in order for transfering to work properly
+# Also updates permissions as
+#   For directories:
+#   drwxrwxrwx
+# For read/write files:
+#   -rw-rw-rw-
+# For readonly files:
+#   -r--r--r--
+#
 #   - Inputs:
 #       - id: str of folder, which is the archive identifier
-def changeOwner(id: str, uid: int=99, gid: int=100):
+def changeOwner(id: str, uid: int=99, gid: int=100, dPerm: int=0o777, fPerm: int= 0o666):
     for root, dirs, files in os.walk(f'output/{id}'):
         os.chown(root, uid, gid)
         for d in dirs:
-            os.chown(os.path.join(root, d), uid, gid)
+            path = os.path.join(root, d)
+            # os.chmod(path, dPerm)
+            os.chown(path, uid, gid)
         for f in files:
-            os.chown(os.path.join(root, f), uid, gid)
+            path = os.path.join(root, f)
+            os.chmod(path, fPerm)
+            os.chown(path, uid, gid)
 
 ########################################################################################################
 #Start app
