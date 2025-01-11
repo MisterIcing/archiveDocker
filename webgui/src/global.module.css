@@ -1,24 +1,24 @@
 .globaltitle{ /* Main color/font for important text */
-    color: red;
+    color: #C44900;
 }
 .globaltext{  /* Main color/font for text to be used */
-    color: rgb(0, 92, 0);
+    color: #432534 !important;
 }
 .globalback{ /* Used for background of all pages */
-    background-color: orange;
+    background-color: #04151F;
     /* background-image: linear-gradient(black, gray); */
     height: 100vh;
     width: 100vw;
     overflow: hidden;
 }
 .globalheaderback{ /* Color for header*/
-    background-color: #1e90ff;
+    background-color: #183A37;
 }
 .globalmainback{ /* Color for card backs*/
-    background-color: blue;
+    background-color: #EFD6AC !important;
 }
 .globalsecback{ /* Secondary color for card backs */
-    background-color: #d66565;
+    background-color: #EFD6AC !important;
 }
 .globalicon{ /* Color for icons - so far only arrow on header */
     color: #caeda1;

@@ -107,10 +107,9 @@ function Ia() {
 
   return (
     <div className={styles.globalback}>
-      <Header />
       <Card className={`cardcss ${styles.globalmainback}`}>
         <Typography variant='h4' className={styles.globaltitle}>
-          Internet Archive
+          Internet Archive File Downloader
         </Typography>
         <br />
         <div style={{display: "flex", alignItems: 'center', justifyContent: 'space-between',}}>
@@ -124,7 +123,7 @@ function Ia() {
               Begin Download
             </Button>
             <div>
-              <Typography>
+              <Typography className={styles.globaltext}>
                 {status}
               </Typography>
             </div>

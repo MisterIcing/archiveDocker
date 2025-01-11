@@ -10,8 +10,8 @@ function OutputInfo(props) {
     const [tab, setTab] = useState(0)
 
     const tabs = [
-        <Tab key="0" label="Files"></Tab>,
-        <Tab key="1" label="Console"></Tab>
+        <Tab key="0" label="Search Results"></Tab>,
+        <Tab key="1" label="Tasks"></Tab>
     ]
 
     const handleTabChange = (event, value) => {
