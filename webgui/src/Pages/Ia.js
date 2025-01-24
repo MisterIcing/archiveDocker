@@ -41,20 +41,14 @@ function Ia() {
   useEffect(() => {
     const getDryRun = async () => {
       try {
-        let set = `http://${window.location.hostname}:5000/api/list/${url}`
-        if(!url){
-          setResGlob("Invalid url")
-          return
-        }
-        let params = [];
-        if(glob) params.push(`glob=${encodeURIComponent(glob)}`);
-        if(exclude) params.push(`exclude=${encodeURI(exclude)}`);
-        if(params.length > 0) set += `?${params.join('&')}`;
+        const res = await axios.post(`http://${window.location.hostname}:5000/api/list`,{
+          url: url,
+          glob: glob,
+          exclude: exclude
+        });
 
-        const response = await axios.get(set);
-
-        setResGlob(response.data.result);
-        console.log(`Passed dry run for ${url}\n`, response.data.result)
+        setResGlob(res.data.result);
+        console.log(`Passed dry run for ${url}\n`, res.data.result)
       }
       catch (eva) {
         console.error("Failed to get dry run: ", eva)

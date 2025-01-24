@@ -50,20 +50,20 @@ celery.conf.update(app.config)
 # 		- 202: No URL/identifier
 # 		- 204: Options confirmation
 # 		- 406: Invalid identifier
-@app.route('/api/list/<identifier>', methods=['GET'])
+@app.route('/api/list', methods=['POST'])
 @cross_origin()
-def list(identifier):
-    # get extra args
-    glob = request.args.get('glob', '*')
-    exclude = request.args.get('exclude', '')
+def list():
+    # preflight
+    if request.method == 'OPTIONS':
+        # Handle preflight request
+        response = make_response('', 200)
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        return response
 
-    data = {
-        'url': identifier,
-        'glob': glob,
-        'exclude': exclude
-    }
-
-    # Give proper error if testing with http
+    data = request.json
+    
     if not data.get('url'):
         return jsonify(error="URL/Identifier is required"), 202
     id = url2ID(data['url'])
@@ -172,7 +172,7 @@ def url2ID_apiWrap():
     if id:
         return jsonify(result=id), 200 
     else:
-        jsonify(error=f'Invalid url. Results: {id}'), 406
+        return jsonify(error=f'Invalid url. Results: {id}'), 406
 
 # TODO this entire function
 # @app.route('/api/checkFiles', methods=['POST'])
@@ -251,15 +251,19 @@ def longDownload(self, id, kwargs):
 #       - None: If no id was found or if uses invalid symbols
 def url2ID(id: str=''):
     # known addresses:
-        # http[s]?://archive.org/details/
+        # http[s]?://archive.org/details/<id>/<file>
+        # https?://archive.org/download/<id>/<file>
     # find & remove url base
-    while re.search("http[s]?://archive.org/details/", id):
-        id = re.sub("http[s]?://archive.org/details/", "", id)
-    # find & remove any subdirectories
-    id = re.split(r'\/.*', id)[0]
+    res = re.match(r"https?:\/\/archive.org\/(?:details|download)\/([^/\n]+).*", id)
+    if res:
+        if re.match(r"^[A-z0-9-.,]+$",res.group(1)):
+            return res.group(1)
+        return None
     # limit identifier to only valid symbols. no $ / # ... you get the gist
         # only allows alphanum . , -
-    if re.search(r"^[A-z0-9-.,]+$", id):
+    res = re.match(r"^[A-z0-9-.,]+$", id)
+    if res:
+        print(id)
         return id
     return None
 
