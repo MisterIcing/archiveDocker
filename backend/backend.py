@@ -115,12 +115,6 @@ def run():
     kwargs = {}
     if data.get('glob'):
         kwargs['glob_pattern'] = data['glob']
-        kwargs['glob_pattern'] = data['glob']
-    if data.get('exclude'):
-        kwargs['exclude_pattern'] = data['exclude']
-        kwargs['glob_pattern'] = data['glob']        
-    if data.get('exclude'):
-        kwargs['exclude_pattern'] = data['exclude']
     kwargs['verbose'] = data.get('verbose', True)
     kwargs['destdir'] = 'output'
 
