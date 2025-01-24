@@ -2,11 +2,11 @@ import './Ia.css'
 import styles from '../global.module.css';
 import { Button, Card, IconButton, TextField, Typography } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
-import Header from '../Components/Header';
+// import Header from '../Components/Header';
 import TabbedArea from '../Components/TabbedArea';
 import { useEffect, useState } from 'react';
 import axios from 'axios';
-import {io} from 'socket.io-client';
+// import {io} from 'socket.io-client';
 
 function Ia() {
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -15,13 +15,14 @@ function Ia() {
   const [url, seturl] = useState('');                     // URL/Identifier debounced
   const [inputGlob, setInputGlob] = useState("*");        // Glob pattern input field
   const [glob, setGlob] = useState ('*');                 // Glob pattern debounced
-  const [inputExclude, setInputExclude] = useState('');   // Exclude pattern input field
-  const [exclude, setExclude] = useState('');             // Exclude pattern debounced
+
+  // disabled bc download doesnt actually have an exclude
+  //   having this makes it seem that it would affect the download even though it doesnt
+  // const [inputExclude, setInputExclude] = useState('');   // Exclude pattern input field
+  // const [exclude, setExclude] = useState('');             // Exclude pattern debounced
 
   const [resGlob, setResGlob] = useState('');             // Output of ia file searching
-  const [active, setActive] = useState(false);            // Used to determine if currently downloading
-  const [status, setStatus] = useState("Inactive");       // Status of task polling
-  const [currTask, setCurrTask] = useState("");
+  const [status, setStatus] = useState("Operational");    // Status of task polling
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //Dry run functions
@@ -31,11 +32,11 @@ function Ia() {
     const timer = setTimeout(() => {
       seturl(inputurl);
       setGlob(inputGlob);
-      setExclude(inputExclude);
+      // setExclude(inputExclude);
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [inputurl, inputGlob, inputExclude]);
+  }, [inputurl, inputGlob]);
 
   // Auto get list of files when fields are updated after debounce
   useEffect(() => {
@@ -44,7 +45,7 @@ function Ia() {
         const res = await axios.post(`http://${window.location.hostname}:5000/api/list`,{
           url: url,
           glob: glob,
-          exclude: exclude
+          // exclude: exclude
         });
 
         setResGlob(res.data.result);
@@ -57,43 +58,36 @@ function Ia() {
     };
 
     getDryRun()
-  }, [url, glob, exclude]);
+  }, [url, glob]);
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //Downloading functions
 
   // Start download when button is pressed
   async function startDownload() {
-    setActive(true);
     const res = await axios.post(`http://${window.location.hostname}:5000/api/download`,{
         url: url,
         glob: glob,
-        exclude: exclude
+        // exclude: exclude
       });
 
     if(res.status < 200 || res.status >= 300){
       console.error('Failed to start download');
-      setActive(false);
       setStatus('Failed')
       return;
     }
+    setStatus(`Last task: ${res.data.task_id}`);
 
-    console.log(`Started download task: ${res.data.task_id}`)
-    setStatus(`Task: ${res.data.task_id}`);
+    // const socket = io(`http://${window.location.hostname}:5000`, {transports: ['websocket', 'polling']});
 
-    const socket = io(`http://${window.location.hostname}:5000`, {transports: ['websocket', 'polling']});
-    setCurrTask(res.data.task_id);
+    // socket.on('task_status', (data) => {
+    //   console.log(data);
 
-    socket.on('task_status', (data) => {
-      console.log(data);
-
-      if(data.status === 'Completed'){
-        setStatus("Complete")
-        setCurrTask("");
-        setActive(false);
-        socket.disconnect();
-      }
-    })
+    //   if(data.status === 'Completed'){
+    //     setStatus("Complete");
+    //     socket.disconnect();
+    //   }
+    // })
   };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -110,10 +104,10 @@ function Ia() {
           <div className='leftInputs'>
             <TextField label="URL/Identifier" value={inputurl} onChange={(eva) => setinputurl(eva.target.value)}></TextField>
             <TextField label="Glob Pattern" value={inputGlob} onChange={(eva) => setInputGlob(eva.target.value)}></TextField>
-            <TextField label="Exclude Pattern" value={inputExclude} onChange={(eva) => setInputExclude(eva.target.value)}></TextField>
+            {/* <TextField label="Exclude Pattern" value={inputExclude} onChange={(eva) => setInputExclude(eva.target.value)}></TextField> */}
           </div>
-          <div className="rightInputs">
-            <Button variant='outlined' disabled={active} startIcon={<DownloadIcon />} onClick={(eva) => startDownload()}>
+          <div className="rightInputs" style={{display: 'flex', flexDirection: 'column', alignItems: 'right'}}>
+            <Button variant='outlined' startIcon={<DownloadIcon />} onClick={(eva) => startDownload()}>
               Begin Download
             </Button>
             <div>

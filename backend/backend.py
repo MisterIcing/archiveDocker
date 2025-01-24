@@ -16,6 +16,7 @@ from threading import Thread
 UI_UPDATE_TIME = 10         # seconds between sending task updates
 POLLING_ENABLED = True      # enable/disable checking when download is complete
 REDIS_URL = 'redis://127.0.0.1:6379/0'
+# REDIS_URL = 'redis://redis:6379/0' # local development url
 
 ########################################################################################################
 #Set up
@@ -63,7 +64,7 @@ def list():
         return response
 
     data = request.json
-    
+
     if not data.get('url'):
         return jsonify(error="URL/Identifier is required"), 202
     id = url2ID(data['url'])
@@ -88,7 +89,6 @@ def list():
 # 		- `url`: archive identifier or url with identifier
 # 	- Optional Inputs:
 # 		- `glob`: glob pattern
-# 		- `exclude`: glob pattern
 # 		- `verbose`: boolean
 # 	- Output: None
 @app.route('/api/download', methods=['OPTIONS', 'POST'])
@@ -111,10 +111,14 @@ def run():
     if not id:
         return jsonify(error="Identifier could not be resolved"), 406
 
-    # extra args (glob/exclude)
+    # extra args (glob)
     kwargs = {}
     if data.get('glob'):
         kwargs['glob_pattern'] = data['glob']
+        kwargs['glob_pattern'] = data['glob']
+    if data.get('exclude'):
+        kwargs['exclude_pattern'] = data['exclude']
+        kwargs['glob_pattern'] = data['glob']        
     if data.get('exclude'):
         kwargs['exclude_pattern'] = data['exclude']
     kwargs['verbose'] = data.get('verbose', True)
