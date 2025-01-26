@@ -289,7 +289,8 @@ def updateStatus(task_id):
     time.sleep(UI_UPDATE_TIME)
 
 # Ownership changing
-# Unraid needs the owner to be `nobody users` (65534) (99) in order for transfering to work properly
+# Unraid needs the owner to be `nobody users` (99) (100) in order for transfering to work properly
+# Uses mask 022
 # Also updates permissions as
 #   For directories:
 #   drwxrwxrwx
@@ -297,10 +298,12 @@ def updateStatus(task_id):
 #   -rw-rw-rw-
 # For readonly files:
 #   -r--r--r--
+# https://www.reddit.com/r/unRAID/comments/xup40x/comment/iqxpyld/?utm_source=share&utm_medium=web3x&utm_name=web3xcss&utm_term=1&utm_content=share_button
 #
 #   - Inputs:
 #       - id: str of folder, which is the archive identifier
 def changeOwner(id: str, uid: int=99, gid: int=100, dPerm: int=0o777, fPerm: int= 0o666):
+    oMask = os.umask(0o022)
     for root, dirs, files in os.walk(f'output/{id}'):
         os.chown(root, uid, gid)
         for d in dirs:
@@ -311,6 +314,7 @@ def changeOwner(id: str, uid: int=99, gid: int=100, dPerm: int=0o777, fPerm: int
             path = os.path.join(root, f)
             os.chmod(path, fPerm)
             os.chown(path, uid, gid)
+    os.umask(oMask)
 
 ########################################################################################################
 #Start app
