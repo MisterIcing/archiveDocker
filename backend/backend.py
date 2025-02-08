@@ -228,7 +228,7 @@ def changeOwner(id: str, uid: int=99, gid: int=100, dPerm: int=0o777, fPerm: int
         os.chown(root, uid, gid)
         for d in dirs:
             path = os.path.join(root, d)
-            # os.chmod(path, dPerm)
+            os.chmod(path, dPerm)
             os.chown(path, uid, gid)
         for f in files:
             path = os.path.join(root, f)
