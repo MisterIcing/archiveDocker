@@ -34,7 +34,7 @@ FROM node:18-slim AS prod
     RUN echo "#!/bin/bash" > init \
         && echo "serve -s frontend -l 3000 2>&1 | /app/log-wrapper.sh FRONTEND &" >> init \
         && echo "redis-server 2>&1 | /app/log-wrapper.sh REDIS &" >> init \
-        && echo "celery -A backend.backend.celery worker --loglevel=info 2>&1 | /app/log-wrapper.sh CELERY &" >> init \
+        && echo "celery -A backend.backend.celery worker --loglevel=info -E 2>&1 | /app/log-wrapper.sh CELERY &" >> init \
         && echo "gunicorn -b '0.0.0.0:5000' 'backend.backend:app' --workers 1 --log-level info --access-logfile - --worker-class eventlet 2>&1 | /app/log-wrapper.sh GUNICORN &" >> init \
         && echo "wait" >> init \
         && chmod +x init

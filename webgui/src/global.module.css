@@ -28,6 +28,20 @@
     border-radius: 50px;
 }
 
+.gStatDone{ /* Backgound for completed tasks */
+    background-color: #65d677 !important;
+}
+.gStatRun{ /* Backgorund color for running tasks */
+    background-color: #EFD6AC !important;
+}
+.gStatErr{ /* Background color for errored tasks */
+    background-color: #d66565 !important;
+}
+
+.gStatIdle{ /* Background color for inactive tasks */
+    background-color: #a79678 !important;
+}
+
 :root{ /* Needed for mui tags */
     --primary-color: lightgray; /* Icon Color */
     --secondary-color: #d66565; /* Secondary Icon Color */

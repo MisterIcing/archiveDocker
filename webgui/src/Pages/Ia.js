@@ -1,16 +1,37 @@
 import './Ia.css'
 import styles from '../global.module.css';
-import { Button, Card, IconButton, TextField, Typography } from '@mui/material';
+import { Button, Card, TextField, Typography } from '@mui/material';
 import DownloadIcon from '@mui/icons-material/Download';
 // import Header from '../Components/Header';
 import TabbedArea from '../Components/TabbedArea';
 import { useEffect, useState } from 'react';
 import axios from 'axios';
-// import {io} from 'socket.io-client';
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//Classes
+
+  // Defined class to hold task data and status
+  export class taskData {
+    constructor(id, url, glob, res){
+      this.id = id;
+      this.url = url;
+      this.status = 'IDLE';
+      this.glob = glob
+      this.res = res;
+    }
+
+    getID() {return this.id;}
+    getURL() {return this.url;}
+    getStatus() {return this.status;}
+
+  }
+
+  // const tmpTask = new taskData('5aa61d6b-c9f3-4c68-95e6-272c2f5f7ad9', 'mister-ed-s-04', '*', 'Mister Ed S04E02 Wilbur Post, Honorary Horse.mp4 Mister Ed S04E03 Ed Discovers America.mp4 Mister Ed S04E04 Patter of Little Hooves.mp4')
 
 function Ia() {
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //Variables
+
   const [inputurl, setinputurl] = useState('');           // URL/Identifier input field 
   const [url, seturl] = useState('');                     // URL/Identifier debounced
   const [inputGlob, setInputGlob] = useState("*");        // Glob pattern input field
@@ -23,6 +44,7 @@ function Ia() {
 
   const [resGlob, setResGlob] = useState('');             // Output of ia file searching
   const [status, setStatus] = useState("Operational");    // Status of task polling
+  const [taskArr, setTaskArr] = useState([]);             // Array of running/completed tasks
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //Dry run functions
@@ -78,16 +100,9 @@ function Ia() {
     }
     setStatus(`Last task: ${res.data.task_id}`);
 
-    // const socket = io(`http://${window.location.hostname}:5000`, {transports: ['websocket', 'polling']});
+    const newTask = new taskData(res.data.task_id, url, glob, resGlob);
 
-    // socket.on('task_status', (data) => {
-    //   console.log(data);
-
-    //   if(data.status === 'Completed'){
-    //     setStatus("Complete");
-    //     socket.disconnect();
-    //   }
-    // })
+    setTaskArr([newTask, ...taskArr]);
   };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -118,7 +133,7 @@ function Ia() {
           </div>
         </div>
         <br />
-        <TabbedArea url={url} globing={resGlob} />
+        <TabbedArea url={url} globing={resGlob} taskArr={taskArr} />
       </Card>
     </div>
   );

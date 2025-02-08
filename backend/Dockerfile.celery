@@ -17,4 +17,4 @@ COPY . /app/
 
 # Use CMD for logging
 VOLUME [ "/app/output/" ]
-CMD ["celery", "-A", "backend.celery", "worker", "--loglevel=info"]
+CMD ["celery", "-A", "backend.celery", "worker", "--loglevel=info", "-E"]

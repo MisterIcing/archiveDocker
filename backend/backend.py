@@ -4,19 +4,15 @@ from flask_cors import CORS, cross_origin
 from internetarchive import get_files, download
 import os
 import re
-import time
 from celery import Celery
-from celery.result import AsyncResult
-from threading import Thread
 
 #https://archive.org/developers/internetarchive/api.html#searching-items
 
 ########################################################################################################
 #Global vars
 UI_UPDATE_TIME = 10         # seconds between sending task updates
-POLLING_ENABLED = True      # enable/disable checking when download is complete
 REDIS_URL = 'redis://127.0.0.1:6379/0'
-# REDIS_URL = 'redis://redis:6379/0' # local development url
+# REDIS_URL = 'redis://redis:6379/0' # compose url
 
 ########################################################################################################
 #Set up
@@ -31,9 +27,9 @@ socketio = SocketIO(app, cors_allowed_origins="*", message_queue=REDIS_URL)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 # set up celery for long downloads
-app.config['CELERY_BROKER_URL'] = REDIS_URL
+app.config['BROKER_URL'] = REDIS_URL
 app.config['CELERY_RESULT_BACKEND'] = REDIS_URL
-celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'], backend=app.config['CELERY_RESULT_BACKEND'], task_ignore_result=False)
+celery = Celery(app.name, broker=app.config['BROKER_URL'], backend=app.config['CELERY_RESULT_BACKEND'], task_ignore_result=False)
 celery.conf.update(app.config)
 
 ########################################################################################################
@@ -111,7 +107,7 @@ def run():
     if not id:
         return jsonify(error="Identifier could not be resolved"), 406
 
-    # extra args (glob)
+    # extra args (glob, verbose, destdir)
     kwargs = {}
     if data.get('glob'):
         kwargs['glob_pattern'] = data['glob']
@@ -124,26 +120,6 @@ def run():
     task = longDownload.delay(id, kwargs)
 
     return jsonify({'task_id': task.id}), 200
-
-# - GET `/api/task_status/<task_id>`
-# 	- Checks the status of downloading the task based on id
-# 	- Note: Unused in place of socketio emitting when the task is done
-# 	- Inputs:
-# 		- `task_id`: id number given from `/api/download`
-# 	- Outputs:
-# 		- 200: Pending, in progress, or complete depending on task state
-@app.route('/api/task_status/<task_id>', methods=['GET'])
-def task_status(task_id):
-    task = longDownload.AsyncResult(task_id)
-    if task.state == 'PENDING':
-        response = {'status': 'Pending...'}
-    if task.state == 'PROGRESS':
-        response = {'status': 'In Progress..', 'result': str(task.info)}
-    elif task.state == 'SUCCESS':
-        response = {'status': 'Completed', 'result': task.result}
-    else:
-        response = {'status': task.state, 'result': str(task.info)}
-    return jsonify(response), 200
 
 # POST `/api/url2ID`
 # 	- Limits URL to identifier for internet archive
@@ -172,44 +148,6 @@ def url2ID_apiWrap():
     else:
         return jsonify(error=f'Invalid url. Results: {id}'), 406
 
-# TODO this entire function
-# @app.route('/api/checkFiles', methods=['POST'])
-# def checkFiles():
-#     data = request.json
-
-#     if not data.get('url'):
-#         return jsonify(error="URL/Identifier is required"), 202
-#     id = url2ID(data['url']) # Should sanitize from going back dirs
-#     if not id:
-#         return jsonify(error="Identifier could not be resolved"), 406
-
-#     if not os.path.exists():
-#         os.makedirs()
-
-# - GET `/api/startPolling`
-# 	- Allows polling for the status of the download
-# 	- Note: Unused as it should always be enabled
-# 	- Inputs:
-# 	- Outputs:
-# 		- 200: 'Enabled'
-@app.route('/api/startPolling', methods=['GET'])
-def startPolling():
-    global POLLING_ENABLED
-    POLLING_ENABLED = True
-    return jsonify({'result': 'Enabled'}), 200
-
-# - GET `/api/stopPolling`
-# 	- Disables polling for the status of the download
-# 	- Note: Unused as it should not be disabled
-# 	- Inputs:
-# 	- Outputs:
-# 		- 200: 'Disabled'
-@app.route('/api/stopPolling', methods=['GET'])
-def stopPolling():
-    global POLLING_ENABLED
-    POLLING_ENABLED = False
-    return jsonify({'result': 'Disabled'}), 200
-
 ########################################################################################################
 #Celery helpers
 
@@ -230,13 +168,19 @@ def stopPolling():
 #           - task_status complete
 @celery.task(bind=True)
 def longDownload(self, id, kwargs):
-    socketio.emit('task_status', {'status': 'Pending'})
-    result = download(id, **kwargs)
+    taskId = self.request.id
+    try:
+        socketio.emit('tUpdate', {'taskId': taskId, 'status': 'STARTED'})
 
-    changeOwner(id)
+        download(id, **kwargs)
+        changeOwner(id)
 
-    socketio.emit('task_status', {'status': 'Completed', 'result': result})
-    return "Completed Download"
+        socketio.emit('tUpdate', {'taskId': taskId, 'status': 'FINISHED'})
+        return True
+    except Exception as eva:
+        socketio.emit('tUpdate', {'taskId': taskId, 'status': 'FAILED'})
+        return False
+    
 
 ########################################################################################################
 #Helper functions
@@ -261,32 +205,8 @@ def url2ID(id: str=''):
         # only allows alphanum . , -
     res = re.match(r"^[A-z0-9-.,]+$", id)
     if res:
-        print(id)
         return id
     return None
-
-# Emitter status updater
-#   - Inputs: 
-#       - task_id: task id corresponding to async download
-#   - Outputs:
-#       - Socket emit w/task id and status
-#   - Statuses:
-#       - Pending: waiting to start
-#       - In Progress: currently running; includes task info as `progress`
-#       - Completed: finished task
-#       - Unknown: catchall; includes task state as `progress`
-def updateStatus(task_id):
-    task = AsyncResult(task_id)
-    if task.state == 'PENDING':
-        socketio.emit('task_status', {'task_id': task_id, 'status': 'Pending' })
-    elif task.state == 'PROGRESS':
-        socketio.emit('task_status', {'task_id': task_id, 'status': 'In Progress', 'progress': task.info})
-    elif task.state == "SUCCESS":
-        socketio.emit('task_status', {'task_id': task_id, 'status': 'Completed'})
-        return
-    else:
-        socketio.emit('task_status', {'task_id': task_id, 'status': 'Unknown', 'progress': task.state})
-    time.sleep(UI_UPDATE_TIME)
 
 # Ownership changing
 # Unraid needs the owner to be `nobody users` (99) (100) in order for transfering to work properly
@@ -320,5 +240,4 @@ def changeOwner(id: str, uid: int=99, gid: int=100, dPerm: int=0o777, fPerm: int
 #Start app
 
 if __name__ == '__main__':
-    # app.run(port=5000)
-    socketio.run(app, host='0.0.0.0', port=5000)
+    socketio.run(app, host='0.0.0.0', port=5000, debug=True)
