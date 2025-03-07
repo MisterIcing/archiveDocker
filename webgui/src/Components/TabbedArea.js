@@ -7,12 +7,12 @@ import styles from '../global.module.css';
 import TaskOutput from './TaskOutput';
 
 function OutputInfo(props) {
-  const [tab, setTab] = useState(0)
+  const [tab, setTab] = useState(0);
 
   const taskArr = props.taskArr;
 
   const tabs = [
-    <Tab key="0" label="Search Results"></Tab>,
+    <Tab key="0" label={`Search Results (${props.globing ? props.globing.length : 0})`}></Tab>,
     <Tab key="1" label="Tasks"></Tab>
   ]
 
@@ -39,7 +39,7 @@ function OutputInfo(props) {
             <div style={{ display: tab === 0 ? "block" : "none" }}>
               {props.globing ? (
                 <Typography className={styles.globaltext} style={{ whiteSpace: "pre-line" }}>
-                  {props.globing}
+                  {props.globing.join('\n')}
                 </Typography>
               ) : (
                 <Typography className={styles.globaltext} style={{ whiteSpace: "pre-line" }}>

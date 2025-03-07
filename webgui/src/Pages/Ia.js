@@ -42,7 +42,7 @@ function Ia() {
   // const [inputExclude, setInputExclude] = useState('');   // Exclude pattern input field
   // const [exclude, setExclude] = useState('');             // Exclude pattern debounced
 
-  const [resGlob, setResGlob] = useState('');             // Output of ia file searching
+  const [resGlob, setResGlob] = useState([]);             // Output of ia file searching
   const [status, setStatus] = useState("Operational");    // Status of task polling
   const [taskArr, setTaskArr] = useState([]);             // Array of running/completed tasks
 
@@ -75,7 +75,7 @@ function Ia() {
       }
       catch (eva) {
         console.error("Failed to get dry run: ", eva)
-        setResGlob(`Error retriving list for: ${url}\nMay not have been able to determine identifier`);
+        setResGlob([`Error retriving list for: ${url}\nMay not have been able to determine identifier`]);
       }
     };
 

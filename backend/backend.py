@@ -5,6 +5,7 @@ from internetarchive import get_files, download
 import os
 import re
 from celery import Celery
+import json
 
 #https://archive.org/developers/internetarchive/api.html#searching-items
 
@@ -75,9 +76,10 @@ def list():
         kwargs['exclude_pattern'] = data['exclude']
 
     fileNames = [f.name for f in get_files(id, **kwargs)]
-    result = '\n'.join(fileNames)
+    # result = '\n'.join(fileNames)
+    result = {"result": fileNames}
 
-    return jsonify(result=result), 200
+    return result, 200
 
 # POST `/api/download`
 # 	- Begins download from internet archive to storage (`backend/output`)
@@ -116,6 +118,8 @@ def run():
 
     # create output folder if it doesnt exist
     os.makedirs('output', exist_ok=True)
+    os.chmod('output', 0o777)
+    os.chown('output', 99, 100)
 
     task = longDownload.delay(id, kwargs)
 
